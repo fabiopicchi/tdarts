@@ -117,12 +117,28 @@ function createBody(width, height, collisionGroup)
     return newBody
 end
 
+function queryBody(group, origin, radius)
+    local minDistance = math.huge
+    local target = nil
+
+    for _, body in pairs(collisionGroups[group]) do
+        if minDistance > (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2 then
+            minDistance = (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2
+            if minDistance < radius ^ 2 then
+                target = body
+            end
+        end
+    end
+
+    return target
+end
+
 function removeBody(body)
     bodyList[body.handle] = nil
     collisionGroups[body.collisionGroup][body.handle] = nil
 end
 
-function loadTilemap(tilemap, collidableTiles)
+function loadTilemap(tilemap, collidableTiles, wrap)
     for i = 1, #tilemap.tiles do
         if collidableTiles[tilemap.tiles[i]] then
             local row = math.floor((i - 1) / tilemap.widthInTiles)
@@ -133,6 +149,29 @@ function loadTilemap(tilemap, collidableTiles)
             body.position.y = row * tilemap.tileHeight
             body.immovable = true
         end
+    end
+
+    if wrap then
+        for i = 0, tilemap.widthInTiles - 1 do
+            local body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body.position.x = i * tilemap.tileWidth
+            body.position.y = -tilemap.tileHeight
+            
+            body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body.position.x = i * tilemap.tileWidth
+            body.position.y = 1080
+        end
+
+        for i = 0, tilemap.heightInTiles - 1 do
+            local body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body.position.x = -tilemap.tileWidth
+            body.position.y = i * tilemap.tileHeight
+            
+            body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body.position.x = tilemap.widthInTiles * tilemap.tileWidth
+            body.position.y = i * tilemap.tileHeight
+        end
+
     end
 end
 

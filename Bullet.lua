@@ -21,7 +21,11 @@ function Bullet:init(x, y, angle, body)
     self.width = 10
     self.height = 10
 
-    self.body:addCollisionCallback("tilemap", function (a, b)
+    self.body:addCollisionCallback("tilemap", function(a, b)
+        a:destroy()
+        self.parentContext:removeObject(self)
+    end)
+    self.body:addOverlapCallback("enemy", function(a, b)
         a:destroy()
         self.parentContext:removeObject(self)
     end)

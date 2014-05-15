@@ -79,7 +79,7 @@ return {
       properties = {},
       objects = {
         {
-          name = "",
+          name = "3a",
           type = "",
           shape = "polyline",
           x = 177,
@@ -98,7 +98,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "3b",
           type = "",
           shape = "polyline",
           x = 208,
@@ -116,7 +116,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "1a",
           type = "",
           shape = "polyline",
           x = 4,
@@ -134,7 +134,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "1b",
           type = "",
           shape = "polyline",
           x = 820,
@@ -153,7 +153,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "4b",
           type = "",
           shape = "polyline",
           x = 1925,
@@ -173,7 +173,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "4a",
           type = "",
           shape = "polyline",
           x = 1927,
@@ -193,7 +193,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "2a",
           type = "",
           shape = "polyline",
           x = 1555,
@@ -214,7 +214,7 @@ return {
           properties = {}
         },
         {
-          name = "",
+          name = "2b",
           type = "",
           shape = "polyline",
           x = 1921,
@@ -231,6 +231,268 @@ return {
             { x = -1357, y = 288 },
             { x = -1360, y = 228 }
           },
+          properties = {}
+        }
+      }
+    },
+    {
+      type = "objectgroup",
+      name = "resources",
+      visible = true,
+      opacity = 1,
+      properties = {},
+      objects = {
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 160,
+          y = 192,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 128,
+          y = 224,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 96,
+          y = 224,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 96,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 128,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 160,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 192,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 352,
+          y = 736,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 352,
+          y = 768,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 384,
+          y = 768,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 416,
+          y = 768,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 352,
+          y = 800,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 384,
+          y = 800,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1632,
+          y = 192,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1664,
+          y = 192,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1632,
+          y = 224,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1664,
+          y = 224,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1696,
+          y = 224,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1664,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1696,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1728,
+          y = 256,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1664,
+          y = 288,
+          width = 32,
+          height = 32,
+          visible = true,
+          properties = {}
+        },
+        {
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 1696,
+          y = 288,
+          width = 32,
+          height = 32,
+          visible = true,
           properties = {}
         }
       }
