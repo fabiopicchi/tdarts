@@ -18,7 +18,8 @@ RIGHT = "right"
 BOTTOM = "bottom"
 NONE = "none"
 
-function AABBBody:init(width, height)
+function AABBBody:init(world, width, height)
+    self.world = world
     self.width = width
     self.height = height
 
@@ -82,46 +83,52 @@ function AABBBody:wasTouching(dir)
 end
 
 function AABBBody:destroy()
-    removeBody(self)
+    self.world:removeBody(self)
 end
 
-local nextHandle = 1
-local freeHandles = {}
-local bodyList = {}
-local collisionGroups = {}
+local AABBWorld = Class{}
 
-local function getNewHandle()
-    if #freeHandles > 0 then
-        return table.remove(freeHandles)
+local function getNewHandle(world)
+    if #world.freeHandles > 0 then
+        return table.remove(world.freeHandles)
     else
-        local handle = nextHandle
-        nextHandle = nextHandle + 1
+        local handle = world.nextHandle
+        world.nextHandle = world.nextHandle + 1
         return handle
     end
 end
 
-function createBody(width, height, collisionGroup)
-    local newBody = AABBBody(width, height)
-    newBody.handle = getNewHandle()
+function AABBWorld:init()
+    self.nextHandle = 1
+    self.freeHandles = {}
+    self.bodyList = {}
+    self.collisionGroups = {}
 
-    bodyList[newBody.handle] = newBody
+end
+
+function AABBWorld:createBody(width, height, collisionGroup)
+    local newBody = AABBBody(self, width, height)
+    newBody.handle = getNewHandle(self)
+
+    self.bodyList[newBody.handle] = newBody
 
     if collisionGroup then
-        if not collisionGroups[collisionGroup] then
-            collisionGroups[collisionGroup] = {}
+        if not self.collisionGroups[collisionGroup] then
+            self.collisionGroups[collisionGroup] = {}
         end
 
-        collisionGroups[collisionGroup][newBody.handle] = newBody
+        self.collisionGroups[collisionGroup][newBody.handle] = newBody
         newBody.collisionGroup = collisionGroup
     end
+
     return newBody
 end
 
-function queryBody(group, origin, radius)
+function AABBWorld:queryBody(group, origin, radius)
     local minDistance = math.huge
     local target = nil
 
-    for _, body in pairs(collisionGroups[group]) do
+    for _, body in pairs(self.collisionGroups[group]) do
         if minDistance > (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2 then
             minDistance = (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2
             if minDistance < radius ^ 2 then
@@ -133,18 +140,18 @@ function queryBody(group, origin, radius)
     return target
 end
 
-function removeBody(body)
-    bodyList[body.handle] = nil
-    collisionGroups[body.collisionGroup][body.handle] = nil
+function AABBWorld:removeBody(body)
+    self.bodyList[body.handle] = nil
+    self.collisionGroups[body.collisionGroup][body.handle] = nil
 end
 
-function loadTilemap(tilemap, collidableTiles, wrap)
+function AABBWorld:loadTilemap(tilemap, collidableTiles, wrap)
     for i = 1, #tilemap.tiles do
         if collidableTiles[tilemap.tiles[i]] then
             local row = math.floor((i - 1) / tilemap.widthInTiles)
             local col = (i - 1) % tilemap.widthInTiles
         
-            local body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = col * tilemap.tileWidth
             body.position.y = row * tilemap.tileHeight
             body.immovable = true
@@ -153,21 +160,21 @@ function loadTilemap(tilemap, collidableTiles, wrap)
 
     if wrap then
         for i = 0, tilemap.widthInTiles - 1 do
-            local body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = i * tilemap.tileWidth
             body.position.y = -tilemap.tileHeight
             
-            body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = i * tilemap.tileWidth
             body.position.y = 1080
         end
 
         for i = 0, tilemap.heightInTiles - 1 do
-            local body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = -tilemap.tileWidth
             body.position.y = i * tilemap.tileHeight
             
-            body = createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
+            body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = tilemap.widthInTiles * tilemap.tileWidth
             body.position.y = i * tilemap.tileHeight
         end
@@ -175,14 +182,14 @@ function loadTilemap(tilemap, collidableTiles, wrap)
     end
 end
 
-function update(dt)
-    for handle, body in pairs(bodyList) do
+function AABBWorld:update(dt)
+    for handle, body in pairs(self.bodyList) do
         body:update(dt)
     end
 end
 
-function draw()
-    for handle, body in pairs(bodyList) do
+function AABBWorld:draw()
+    for handle, body in pairs(self.bodyList) do
         love.graphics.reset()
         love.graphics.setColor(0, 255, 0, 255)
         love.graphics.rectangle("line", body.position.x, body.position.y, body.width, body.height)
@@ -231,19 +238,19 @@ local function overlapHitboxes (h1, h2)
     end
 end
 
-function overlap (h1, h2)
+function AABBWorld:overlap (h1, h2)
     if type(h1) == "string" then
-        if not collisionGroups[h1] then return end
-        for id, hitbox in pairs(collisionGroups[h1]) do
-            overlap (hitbox, h2)
+        if not self.collisionGroups[h1] then return end
+        for id, hitbox in pairs(self.collisionGroups[h1]) do
+            self:overlap(hitbox, h2)
         end
     elseif type(h2) == "string" then
-        if not collisionGroups[h2] then return end
-        for id, hitbox in pairs(collisionGroups[h2]) do
-            overlapHitboxes (h1, hitbox)
+        if not self.collisionGroups[h2] then return end
+        for id, hitbox in pairs(self.collisionGroups[h2]) do
+            overlapHitboxes(h1, hitbox)
         end
     else
-        overlapHitboxes (h1, h2)
+        overlapHitboxes(h1, h2)
     end
 
 end
@@ -343,20 +350,24 @@ local function collideHitboxes (h1, h2)
     end
 end
 
-function collide (h1, h2)
+function AABBWorld:collide (h1, h2)
     if type(h1) == "string" then
-        if not collisionGroups[h1] then return end
-        for id, hitbox in pairs(collisionGroups[h1]) do
-            collide (hitbox, h2)
+        if not self.collisionGroups[h1] then return end
+        for id, hitbox in pairs(self.collisionGroups[h1]) do
+            self:collide(hitbox, h2)
         end
     elseif type(h2) == "string" then
-        if not collisionGroups[h2] then return end
-        for id, hitbox in pairs(collisionGroups[h2]) do
-            collideHitboxes (h1, hitbox)
+        if not self.collisionGroups[h2] then return end
+        for id, hitbox in pairs(self.collisionGroups[h2]) do
+            collideHitboxes(h1, hitbox)
         end
     else
-        collideHitboxes (h1, h2)
+        collideHitboxes(h1, h2)
     end
+end
+
+function createWorld ()
+    return AABBWorld()
 end
 
 return AABBPhysics

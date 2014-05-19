@@ -42,9 +42,9 @@ local function loadPaths(paths, tileWidth, tileHeight)
     return tiledPaths
 end
 
-local function loadResources(resources)
+local function loadResources(world, resources)
     for _, resource in pairs(resources) do
-        local body = AABBPhysics.createBody(resource.width, resource.height, "junk")
+        local body = world:createBody(resource.width, resource.height, "junk")
         body.position.x = resource.x
         body.position.y = resource.y
     end
@@ -52,6 +52,8 @@ end
 
 function StageContext:init(gamepads, stageFile)
     GameContext.init(self)
+
+    self.pWorld = AABBPhysics.createWorld()
 
     self.tiledMapFile = require (stageFile)
     self.gamepads = gamepads
@@ -69,15 +71,15 @@ function StageContext:init(gamepads, stageFile)
         end
 
         if layer.name == RESOURCES_LAYER then
-            loadResources(layer.objects)
+            loadResources(self.pWorld, layer.objects)
         end
     end
 
     self:addObject(tilemap)
-    AABBPhysics.loadTilemap(tilemap, {false, true, true, true}, true)
+    self.pWorld:loadTilemap(tilemap, {false, true, true, true}, true)
     self:addObject(Player(self.gamepads[1], 
-        AABBPhysics.createBody(32, 32, "player"), 
-        AABBPhysics.createBody(48, 48, "playerInfluence")
+        self.pWorld:createBody(32, 32, "player"), 
+        self.pWorld:createBody(48, 48, "playerInfluence")
     ))
 
     self.timer = Timer ()
@@ -85,10 +87,9 @@ function StageContext:init(gamepads, stageFile)
 
     math.randomseed(os.time())
     local function spawn ()
-        print("HUE")
         local arPaths = {}
         table.insert(arPaths, math.random(8))
-        self:addObject(Enemy(paths[arPaths[1]], AABBPhysics.createBody(32, 32, "enemy")))
+        self:addObject(Enemy(paths[arPaths[1]], self.pWorld:createBody(32, 32, "enemy")))
         while #arPaths < 3 do
             local n = math.random(8)
             local hasN = false
@@ -101,7 +102,7 @@ function StageContext:init(gamepads, stageFile)
 
             if not hasN then
                 table.insert(arPaths, n)
-                self:addObject(Enemy(paths[n], AABBPhysics.createBody(32, 32, "enemy")))
+                self:addObject(Enemy(paths[n], self.pWorld:createBody(32, 32, "enemy")))
             end
         end
         self.groupsSpawned = self.groupsSpawned + 1
@@ -117,15 +118,15 @@ function StageContext:init(gamepads, stageFile)
 end
 
 function StageContext:addBullet(x, y, angle)
-    self:addObject(Bullet(x, y, angle, AABBPhysics.createBody(10, 10, "bullet")))
+    self:addObject(Bullet(x, y, angle, self.pWorld:createBody(10, 10, "bullet")))
 end
 
 function StageContext:addSentry(x, y)
-    self:addObject(Sentry(x, y, AABBPhysics.createBody(32, 32, "sentry")))
+    self:addObject(Sentry(x, y, self.pWorld:createBody(32, 32, "sentry")))
 end
 
 function StageContext:queryAABBRadius(group, origin, radius)
-    return AABBPhysics.queryBody(group, origin, radius)
+    return self.pWorld:queryBody(group, origin, radius)
 end
 
 function StageContext:updateBucket(bucket, dt)
@@ -133,15 +134,15 @@ function StageContext:updateBucket(bucket, dt)
     
     GameContext.updateBucket(self, bucket, dt)
 
-    AABBPhysics.update(dt)
+    self.pWorld:update(dt)
 
-    AABBPhysics.collide("player", "tilemap")
-    AABBPhysics.collide("bullet", "tilemap")
-    AABBPhysics.collide("player", "sentry")
+    self.pWorld:collide("player", "tilemap")
+    self.pWorld:collide("bullet", "tilemap")
+    self.pWorld:collide("player", "sentry")
 
-    AABBPhysics.overlap("bullet", "enemy")
-    AABBPhysics.overlap("sentry", "playerInfluence")
-    AABBPhysics.overlap("junk", "playerInfluence")
+    self.pWorld:overlap("bullet", "enemy")
+    self.pWorld:overlap("sentry", "playerInfluence")
+    self.pWorld:overlap("junk", "playerInfluence")
 end
 
 function StageContext:draw()
