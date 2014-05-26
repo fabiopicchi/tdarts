@@ -4,7 +4,9 @@ local math = math
 local type = type
 local table = table
 local pairs = pairs
+local print = print
 local Class = require "Class"
+local Vector2D = require "Vector2D"
 local FloatCompare = require "FloatCompare"
 
 local AABBPhysics = {}
@@ -12,28 +14,19 @@ setfenv(1, AABBPhysics)
 
 local AABBBody = Class{}
 
-TOP = "top"
-LEFT = "left"
-RIGHT = "right"
-BOTTOM = "bottom"
-NONE = "none"
-
 function AABBBody:init(world, width, height)
     self.world = world
     self.width = width
     self.height = height
 
-    self.position = {x = 0, y = 0}
-    self.lastPosition = {x = 0, y = 0}
+    self.position = Vector2D(0, 0)
+    self.lastPosition = Vector2D(0, 0)
 
-    self.speed = {x = 0, y = 0}
-    self.maxSpeed = {x = -1, y = -1}
-    self.acceleration = {x = 0, y = 0}
+    self.speed = Vector2D(0, 0)
+    self.maxSpeed = Vector2D(-1, -1)
+    self.acceleration = Vector2D(0, 0)
 
     self.immovable = false
-
-    self.touching = NONE
-    self.lastTouching = NONE
 
     self.overlapCallbackList = {}
     self.collisionCallbackList = {}
@@ -60,26 +53,13 @@ local function limitValue (val, limit)
 end
 
 function AABBBody:update(dt)
-    self.touching, self.lastTouching = NONE, self.touching
     self.lastPosition.x, self.lastPosition.y = self.position.x, self.position.y
 
     self.position.x, self.position.y = self.position.x + self.speed.x * dt + self.acceleration.x * 0.5 * dt * dt,
-                                        self.position.y + self.speed.y * dt + self.acceleration.y * 0.5 * dt * dt
+    self.position.y + self.speed.y * dt + self.acceleration.y * 0.5 * dt * dt
 
     self.speed.x, self.speed.y = limitValue(self.speed.x + self.acceleration.x * dt, self.maxSpeed.x), 
-                                    limitValue(self.speed.y + self.acceleration.y * dt, self.maxSpeed.y)
-end
-
-function AABBBody:isTouching(dir)
-    if dir == NONE and self.touching == NONE or string.find(self.touching, dir) then return true
-    else return false
-    end
-end
-
-function AABBBody:wasTouching(dir)
-    if dir == NONE and self.lastTouching == NONE or string.find(self.lastTouching, dir) then return true
-    else return false
-    end
+    limitValue(self.speed.y + self.acceleration.y * dt, self.maxSpeed.y)
 end
 
 function AABBBody:destroy()
@@ -103,7 +83,6 @@ function AABBWorld:init()
     self.freeHandles = {}
     self.bodyList = {}
     self.collisionGroups = {}
-
 end
 
 function AABBWorld:createBody(width, height, collisionGroup)
@@ -140,17 +119,55 @@ function AABBWorld:queryBody(group, origin, radius)
     return target
 end
 
+function AABBWorld:raycast(origin, destiny, collisionGroup)
+    destiny:sub(origin)
+    local len = destiny:len()
+
+    local tMaxX = math.abs((32 - origin.x % 32) / destiny.x)
+    local tMaxY = math.abs((32 - origin.y % 32) / destiny.y)
+
+    local tDeltaX = math.abs(32 / destiny.x)
+    local tDeltaY = math.abs(32 / destiny.y)
+
+    local x = math.floor(origin.x / 32)
+    local y = math.floor(origin.y / 32)
+
+    local stepX = math.abs(destiny.x) / destiny.x
+    local stepY = math.abs(destiny.y) / destiny.y
+
+    local lastUpdate = "x"
+
+    while tMaxY < 1 or tMaxX < 1 do
+        if tMaxX < tMaxY then
+            tMaxX = tMaxX + tDeltaX
+            x = x + stepX
+            if self.tilemap.tiles[x + y * self.tilemap.widthInTiles + 1] > 1 then
+                return (tMaxX - tDeltaX) * len
+            end
+        else
+            tMaxY = tMaxY + tDeltaY
+            y = y + stepY
+            if self.tilemap.tiles[x + y * self.tilemap.widthInTiles + 1] > 1 then
+                return (tMaxY - tDeltaY) * len
+            end
+        end
+    end
+
+    return len
+end
+
 function AABBWorld:removeBody(body)
     self.bodyList[body.handle] = nil
     self.collisionGroups[body.collisionGroup][body.handle] = nil
 end
 
 function AABBWorld:loadTilemap(tilemap, collidableTiles, wrap)
+    self.tilemap = tilemap
     for i = 1, #tilemap.tiles do
         if collidableTiles[tilemap.tiles[i]] then
             local row = math.floor((i - 1) / tilemap.widthInTiles)
             local col = (i - 1) % tilemap.widthInTiles
-        
+
             local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = col * tilemap.tileWidth
             body.position.y = row * tilemap.tileHeight
@@ -163,7 +180,7 @@ function AABBWorld:loadTilemap(tilemap, collidableTiles, wrap)
             local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = i * tilemap.tileWidth
             body.position.y = -tilemap.tileHeight
-            
+
             body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = i * tilemap.tileWidth
             body.position.y = 1080
@@ -173,7 +190,7 @@ function AABBWorld:loadTilemap(tilemap, collidableTiles, wrap)
             local body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = -tilemap.tileWidth
             body.position.y = i * tilemap.tileHeight
-            
+
             body = self:createBody(tilemap.tileWidth, tilemap.tileHeight, "tilemap")
             body.position.x = tilemap.widthInTiles * tilemap.tileWidth
             body.position.y = i * tilemap.tileHeight
@@ -191,47 +208,26 @@ end
 function AABBWorld:draw()
     for handle, body in pairs(self.bodyList) do
         love.graphics.reset()
-        love.graphics.setColor(0, 255, 0, 255)
+        if not body.debug then
+            love.graphics.setColor(0, 255, 0, 255)
+        else
+            love.graphics.setColor(255, 0, 0, 255)
+            body.debug = false
+        end
         love.graphics.rectangle("line", body.position.x, body.position.y, body.width, body.height)
     end
 end
 
 local fc = FloatCompare()
 
-local function createHull (h)
-    local delta = {x = h.position.x - h.lastPosition.x, y = h.position.y - h.lastPosition.y}
-    local hull = {}
-    hull.position = {}
-
-    if fc.lt(delta.x, 0) then
-        hull.position.x = h.position.x
-        hull.width = -delta.x + h.width
-    else
-        hull.position.x = h.lastPosition.x
-        hull.width = delta.x + h.width
-    end
-
-    if fc.lt(delta.y, 0) then
-        hull.position.y = h.position.y
-        hull.height = -delta.y + h.height
-    else
-        hull.position.y = h.lastPosition.y
-        hull.height = delta.y + h.height
-    end
-
-    return hull
-end
-
 local function overlapHitboxes (h1, h2)
-    local hull1 = createHull (h1)
-    local hull2 = createHull (h2)
+    if fc.lt(h1.position.x, h2.position.x + h2.width) and fc.gt(h1.position.x + h1.width, h2.position.x) and
+        fc.lt(h1.position.y, h2.position.y + h2.height) and fc.gt(h1.position.y + h1.height, h2.position.y) then
 
-    if fc.le(hull1.position.x, hull2.position.x + hull2.width) and
-    fc.ge(hull1.position.x + hull1.width, hull2.position.x) and
-    fc.le(hull1.position.y, hull2.position.y + hull2.height) and
-    fc.ge(hull1.position.y + hull1.height, hull2.position.y) then
         if h1.overlapCallbackList[h2.collisionGroup] then h1.overlapCallbackList[h2.collisionGroup](h1, h2) end
+
         if h2.overlapCallbackList[h1.collisionGroup] then h2.overlapCallbackList[h1.collisionGroup](h2, h1) end
+
         return true
     else
         return false
@@ -240,126 +236,90 @@ end
 
 function AABBWorld:overlap (h1, h2)
     if type(h1) == "string" then
-        if not self.collisionGroups[h1] then return end
-        for id, hitbox in pairs(self.collisionGroups[h1]) do
-            self:overlap(hitbox, h2)
+        if self.collisionGroups[h1] then
+            for _, hitbox in pairs(self.collisionGroups[h1]) do
+                self:overlap(hitbox, h2)
+            end
         end
     elseif type(h2) == "string" then
-        if not self.collisionGroups[h2] then return end
-        for id, hitbox in pairs(self.collisionGroups[h2]) do
-            overlapHitboxes(h1, hitbox)
+        if self.collisionGroups[h2] then
+            for _, hitbox in pairs(self.collisionGroups[h2]) do
+                overlapHitboxes(h1, hitbox)
+            end
         end
     else
         overlapHitboxes(h1, h2)
     end
-
 end
 
-local h1Delta = {x = 0, y = 0}
-local h2Delta = {x = 0, y = 0}
-local delta = {x = 0, y = 0}
-local toi = {x = 0, y = 0}
-local xDistanceLeft = 0
-local xDistanceRight = 0
-local xDistanceTop = 0
-local xDistanceBottom = 0
-local xDistance = 0
-local yDistance = 0
+local delta = Vector2D(0, 0)
+local entry = Vector2D(0, 0)
+local entryDistance = Vector2D(0, 0)
 
 local function collideHitboxes (h1, h2)
-    if overlapHitboxes (h1, h2) then
-        if h1.touching == NONE then h1.touching = "" end
-        if h2.touching == NONE then h2.touching = "" end
-
-        h1Delta.x = h1.position.x - h1.lastPosition.x
-        h1Delta.y = h1.position.y - h1.lastPosition.y
-
-        h2Delta.x = h2.position.x - h2.lastPosition.x
-        h2Delta.y = h2.position.y - h2.lastPosition.y
-
-        delta.x = h1Delta.x - h2Delta.x
-        delta.y = h1Delta.y - h2Delta.y
-
-        toi.x = -1
-        toi.y = -1
-        
-        -- distance to stay at the left side of the object
-        xDistanceLeft = h2.lastPosition.x - h1.lastPosition.x - h1.width
-        -- distance to stay at the right side of the object
-        xDistanceRight = h2.lastPosition.x + h2.width - h1.lastPosition.x
-        -- distance to stay on top of the object
-        yDistanceTop = h2.lastPosition.y - h1.lastPosition.y - h1.height
-        -- distance to stay at the bottom of the object
-        yDistanceBottom = h2.lastPosition.y + h2.height - h1.lastPosition.y
-
-        xDistance = nil
-        yDistance = nil
+    if overlapHitboxes(h1, h2) then
+        delta.x = (h1.position.x - h1.lastPosition.x) - (h2.position.x - h2.lastPosition.x)
+        delta.y = (h1.position.y - h1.lastPosition.y) - (h2.position.y - h2.lastPosition.y)
 
         if not fc.eq(delta.x, 0) then
             if fc.gt(delta.x, 0) then
-                xDistance = xDistanceLeft
+                entryDistance.x = h2.lastPosition.x - h1.lastPosition.x - h1.width
             elseif fc.lt(delta.x, 0) then
-                xDistance = xDistanceRight
+                entryDistance.x = h2.lastPosition.x + h2.width - h1.lastPosition.x
             end
 
-            if fc.le(math.abs(xDistance), math.abs(delta.x)) then toi.x = xDistance / delta.x end
+            entry.x = entryDistance.x / delta.x
+        else
+            entry.x = -math.huge
         end
 
         if not fc.eq(delta.y, 0) then
             if fc.gt(delta.y, 0) then
-                yDistance = yDistanceTop
+                entryDistance.y = h2.lastPosition.y - h1.lastPosition.y - h1.height
             elseif fc.lt(delta.y, 0) then
-                yDistance = yDistanceBottom
+                entryDistance.y = h2.lastPosition.y + h2.height - h1.lastPosition.y
             end
 
-            if fc.le(math.abs(yDistance), math.abs(delta.y)) then toi.y = yDistance / delta.y end
+            entry.y = entryDistance.y / delta.y
+        else
+            entry.y = -math.huge
         end
 
-        if fc.gt(toi.x, toi.y) and fc.lt(h1.position.y, h2.position.y + h2.height) and fc.gt(h1.position.y + h1.height, h2.position.y) then
-            h1.position.x = h1.lastPosition.x + xDistance
-            h1.speed.x = 0
-            h2.speed.x = 0
-        elseif fc.lt(toi.x, toi.y) and fc.lt(h1.position.x, h2.position.x + h2.width) and fc.gt(h1.position.x + h1.width, h2.position.x) then
-            h1.position.y = h1.lastPosition.y + yDistance
-            h1.speed.y = 0
-            h2.speed.y = 0
-        elseif fc.eq(toi.x, toi.y) and not fc.eq(toi.x, -1) then
-            h1.position.y = h1.lastPosition.y + yDistance
-            h1.speed.y = 0
-            h2.speed.y = 0
-        end
+        local entryTime = math.max(entry.x, entry.y)
 
-        if fc.eq(h1.position.x + h1.width, h2.position.x) and fc.ge(delta.x, 0) then
-            h1.touching = h1.touching .. "_" .. RIGHT
-            h2.touching = h2.touching .. "_" .. LEFT
-        elseif fc.eq(h1.position.x, h2.position.x + h2.width) and fc.le(delta.x, 0) then
-            h2.touching = h2.touching .. "_" .. RIGHT
-            h1.touching = h1.touching .. "_" .. LEFT
-        end
+        if fc.ge(entryTime, 0) and fc.le(entryTime, 1) then 
+            h1.position.x = h1.lastPosition.x + (h1.position.x - h1.lastPosition.x) * entryTime
+            h1.position.y = h1.lastPosition.y + (h1.position.y - h1.lastPosition.y) * entryTime
 
-        if fc.eq(h1.position.y + h1.height, h2.position.y) and fc.ge(delta.y, 0) then 
-            h1.touching = h1.touching .. "_" .. BOTTOM
-            h2.touching = h2.touching .. "_" .. TOP
-        elseif fc.eq(h1.position.y, h2.position.y + h2.height) and fc.le(delta.y, 0) then
-            h2.touching = h2.touching .. "_" .. BOTTOM
-            h1.touching = h1.touching .. "_" .. TOP
-        end
+            h2.position.x = h2.lastPosition.x + (h2.position.x - h2.lastPosition.x) * entryTime
+            h2.position.y = h2.lastPosition.y + (h2.position.y - h2.lastPosition.y) * entryTime
 
-        if h1.collisionCallbackList[h2.collisionGroup] then h1.collisionCallbackList[h2.collisionGroup](h1, h2) end
-        if h2.collisionCallbackList[h1.collisionGroup] then h2.collisionCallbackList[h1.collisionGroup](h2, h1) end
+            if fc.eq(entryTime, entry.x) then
+                h1.speed.x = 0
+                h2.speed.x = 0
+            else
+                h1.speed.y = 0
+                h2.speed.y = 0
+            end
+
+            if h1.collisionCallbackList[h2.collisionGroup] then h1.collisionCallbackList[h2.collisionGroup](h1, h2) end
+            if h2.collisionCallbackList[h1.collisionGroup] then h2.collisionCallbackList[h1.collisionGroup](h2, h1) end
+        end
     end
 end
 
 function AABBWorld:collide (h1, h2)
     if type(h1) == "string" then
-        if not self.collisionGroups[h1] then return end
-        for id, hitbox in pairs(self.collisionGroups[h1]) do
-            self:collide(hitbox, h2)
+        if self.collisionGroups[h1] then
+            for _, hitbox in pairs(self.collisionGroups[h1]) do
+                self:collide(hitbox, h2)
+            end
         end
     elseif type(h2) == "string" then
-        if not self.collisionGroups[h2] then return end
-        for id, hitbox in pairs(self.collisionGroups[h2]) do
-            collideHitboxes(h1, hitbox)
+        if self.collisionGroups[h2] then
+            for _, hitbox in pairs(self.collisionGroups[h2]) do
+                collideHitboxes(h1, hitbox)
+            end
         end
     else
         collideHitboxes(h1, h2)

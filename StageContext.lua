@@ -129,6 +129,10 @@ function StageContext:queryAABBRadius(group, origin, radius)
     return self.pWorld:queryBody(group, origin, radius)
 end
 
+function StageContext:raycast(origin, destiny, collisionGroup)
+    return self.pWorld:raycast(origin, destiny, collisionGroup)
+end
+
 function StageContext:updateBucket(bucket, dt)
     self.timer:update(dt)
     
@@ -147,6 +151,7 @@ end
 
 function StageContext:draw()
     GameContext.draw(self)
+    self.pWorld:draw()
 end
 
 return StageContext

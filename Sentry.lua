@@ -3,6 +3,7 @@ local love = love
 local math = math
 local Class = require "Class"
 local Timer = require "Timer"
+local Vector2D = require "Vector2D"
 local GameObject = require "GameObject"
 local FlagManager = require "FlagManager"
 
@@ -11,13 +12,14 @@ setfenv(1, Sentry)
 
 local SHOT_COOLDOWN = 0.1
 local PERCENTAGE_BUILT_PER_SECOND = 0.5
-local LASER_SIGHT_SPEED = math.pi / 2
+local LASER_SIGHT_SPEED = math.pi / 6
 local SHOT_RADIUS = 200
 
 function Sentry:init(x, y, body)
     GameObject.init(self, x, y)
 
     self.laserSightAngle = 0
+    self.laserSightRadius = SHOT_RADIUS
 
     self.body = body
     self.body.position.x = x
@@ -68,6 +70,12 @@ function Sentry:update(dt)
                 end)
             end
         end
+
+        self.laserSightRadius = math.min(SHOT_RADIUS, self.parentContext:raycast(
+            Vector2D(self.body.position.x + self.body.width / 2, self.body.position.y + self.body.height / 2),
+            Vector2D(self.body.position.x + self.body.width / 2 + math.cos(self.laserSightAngle) * SHOT_RADIUS,
+                self.body.position.y + self.body.height / 2 + math.sin(self.laserSightAngle) * SHOT_RADIUS),
+            "tilemap"))
     end
 end
 
@@ -89,7 +97,7 @@ function Sentry:draw()
         love.graphics.setColor(0, 255, 0, 255)
     else
         love.graphics.setColor(255, 0, 0, 255)
-        love.graphics.line(self.body.position.x + self.body.width / 2, self.body.position.y + self.body.height / 2, self.body.position.x + self.body.width / 2 + math.cos(self.laserSightAngle) * SHOT_RADIUS, self.body.position.y + self.body.height / 2 + math.sin(self.laserSightAngle) * SHOT_RADIUS)
+        love.graphics.line(self.body.position.x + self.body.width / 2, self.body.position.y + self.body.height / 2, self.body.position.x + self.body.width / 2 + math.cos(self.laserSightAngle) * self.laserSightRadius, self.body.position.y + self.body.height / 2 + math.sin(self.laserSightAngle) * self.laserSightRadius)
         love.graphics.setColor(0, 0, 255, 255)
     end
     love.graphics.rectangle("fill", self.body.position.x, self.body.position.y, self.width, self.height)
