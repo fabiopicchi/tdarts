@@ -107,35 +107,48 @@ function AABBWorld:queryBody(group, origin, radius)
     local minDistance = math.huge
     local target = nil
 
-    for _, body in pairs(self.collisionGroups[group]) do
-        if minDistance > (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2 then
-            minDistance = (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2
-            if minDistance < radius ^ 2 then
-                target = body
+    if self.collisionGroups[group] then
+        for _, body in pairs(self.collisionGroups[group]) do
+            if minDistance > (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2 then
+                minDistance = (body.position.x - origin.x) ^ 2 + (body.position.y - origin.y) ^ 2
+                if minDistance < radius ^ 2 then
+                    target = body
+                end
             end
         end
     end
-
     return target
 end
 
 function AABBWorld:raycast(origin, destiny, collisionGroup)
+    -- Makes destiny relative to origin
     destiny:sub(origin)
+
     local len = destiny:len()
 
-    local tMaxX = math.abs((32 - origin.x % 32) / destiny.x)
-    local tMaxY = math.abs((32 - origin.y % 32) / destiny.y)
+    local tMaxX = 0
+    local tMaxY = 0
 
-    local tDeltaX = math.abs(32 / destiny.x)
-    local tDeltaY = math.abs(32 / destiny.y)
+    if destiny.x > 0 then
+        tMaxX = (32 - origin.x % 32) / math.abs(destiny.x)
+    else
+        tMaxX = origin.x % 32 / math.abs(destiny.x)
+    end
+
+    if destiny.y > 0 then
+        tMaxY = (32 - origin.y % 32) / math.abs(destiny.y)
+    else
+        tMaxY = origin.y % 32 / math.abs(destiny.y)
+    end
+
+    local tDeltaX = 32 / math.abs(destiny.x)
+    local tDeltaY = 32 / math.abs(destiny.y)
 
     local x = math.floor(origin.x / 32)
     local y = math.floor(origin.y / 32)
 
-    local stepX = math.abs(destiny.x) / destiny.x
-    local stepY = math.abs(destiny.y) / destiny.y
-
-    local lastUpdate = "x"
+    local stepX = destiny.x / math.abs(destiny.x)
+    local stepY = destiny.y / math.abs(destiny.y)
 
     while tMaxY < 1 or tMaxX < 1 do
         if tMaxX < tMaxY then

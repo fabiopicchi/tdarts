@@ -18,7 +18,93 @@ local UP = {x = 0, y = -1}
 local SENTRY_COST = 100
 local JUNK_EXTRACTION_PER_SECOND = 40
 
-function Player:init(gamepad, body, influenceArea)
+local function gamepadUpdate (self)
+    -- Movement
+    if self.gamepad:buttonPressed("dpright") or self.gamepad:axisMoved("leftx", 0.5) then
+        self.body.speed.x = 200
+        self.facing = RIGHT
+    elseif self.gamepad:buttonPressed("dpleft") or self.gamepad:axisMoved("leftx", -0.5) then
+        self.body.speed.x = -200
+        self.facing = LEFT
+    elseif self.gamepad:buttonPressed("dpdown") or self.gamepad:axisMoved("lefty", 0.5) then
+        self.body.speed.y = 200
+        self.facing = DOWN
+    elseif self.gamepad:buttonPressed("dpup") or self.gamepad:axisMoved("lefty", -0.5) then
+        self.body.speed.y = -200
+        self.facing = UP
+    end
+
+    -- Build sentry
+    if self.gamepad:buttonJustPressed("rightshoulder") then
+        if self.junk >= SENTRY_COST then
+            self.junk = self.junk - SENTRY_COST
+            self.parentContext:addSentry(self.body.position.x + self.facing.x * 32, 
+            self.body.position.y + self.facing.y * 32)
+        end
+    end
+
+    -- Context sensitive action
+    if self.gamepad:buttonPressed("leftshoulder") then
+        self.influenceArea.active = true
+    else
+        self.influenceArea.active = false
+    end
+end
+
+local function keyboardUpdate (self)
+    -- Movement
+    if self.keyboard:keyPressed("right") then
+        self.body.speed.x = 200
+        self.facing = RIGHT
+    elseif self.keyboard:keyPressed("left") then
+        self.body.speed.x = -200
+        self.facing = LEFT
+    elseif self.keyboard:keyPressed("down") then
+        self.body.speed.y = 200
+        self.facing = DOWN
+    elseif self.keyboard:keyPressed("up") then
+        self.body.speed.y = -200
+        self.facing = UP
+    end
+
+    -- Build sentry
+    if self.keyboard:keyJustPressed("z") then
+        if self.junk >= SENTRY_COST then
+            self.junk = self.junk - SENTRY_COST
+            self.parentContext:addSentry(self.body.position.x + self.facing.x * 32, 
+            self.body.position.y + self.facing.y * 32)
+        end
+    end
+
+    -- Context sensitive action
+    if self.keyboard:keyPressed("x") then
+        self.influenceArea.active = true
+    else
+        self.influenceArea.active = false
+    end
+end
+
+local function gamepadPostupdate (self)
+    -- Shooting
+    local rightAnalogMovement = self.gamepad:axis("rightx") * self.gamepad:axis("rightx") +
+    self.gamepad:axis("righty") * self.gamepad:axis("righty")
+
+    if rightAnalogMovement >= 0.81 and not self.flagManager:isFlagSet("SHOT_COOLDOWN") then
+        local rightAnalogDirection = math.atan2(self.gamepad:axis("righty"), self.gamepad:axis("rightx"))
+        self.parentContext:addBullet(self.body.position.x + self.width / 2, self.body.position.y + self.height / 2, rightAnalogDirection)
+
+        self.flagManager:setFlag("SHOT_COOLDOWN")
+        self.timer:start(SHOT_COOLDOWN, function ()
+            self.flagManager:resetFlag("SHOT_COOLDOWN")
+        end)
+    end
+end
+
+local function keyboardPostUpdate (self)
+
+end
+
+function Player:init(input, body, influenceArea)
     body.position.x = 944
     body.position.y = 524
     GameObject.init(self, body.position.x, body.position.y)
@@ -32,7 +118,17 @@ function Player:init(gamepad, body, influenceArea)
 
     self.width = self.body.width
     self.height = self.body.height
-    self.gamepad = gamepad
+
+    if input.method == "gamepad" then
+        self.gamepad = input.gamepad
+        self.inputUpdate = gamepadUpdate
+        self.inputPostUpdate = gamepadPostUpdate
+    else
+        self.keyboard = input.keyboard
+        self.inputUpdate = keyboardUpdate
+        self.inputPostUpdate = keyboardPostUpdate
+    end
+
     self.facing = LEFT
     self.junk = 100
 
@@ -56,55 +152,18 @@ function Player:update(dt)
     self.body.speed.x = 0
     self.body.speed.y = 0
 
-    if self.gamepad:buttonPressed("dpright") or self.gamepad:axisMoved("leftx", 0.5) then
-        self.body.speed.x = 200
-        self.facing = RIGHT
-    elseif self.gamepad:buttonPressed("dpleft") or self.gamepad:axisMoved("leftx", -0.5) then
-        self.body.speed.x = -200
-        self.facing = LEFT
-    elseif self.gamepad:buttonPressed("dpdown") or self.gamepad:axisMoved("lefty", 0.5) then
-        self.body.speed.y = 200
-        self.facing = DOWN
-    elseif self.gamepad:buttonPressed("dpup") or self.gamepad:axisMoved("lefty", -0.5) then
-        self.body.speed.y = -200
-        self.facing = UP
-    end
-
-    if self.gamepad:buttonJustPressed("rightshoulder") then
-        if self.junk >= SENTRY_COST then
-            self.junk = self.junk - SENTRY_COST
-            self.parentContext:addSentry(self.body.position.x + self.facing.x * 32, 
-            self.body.position.y + self.facing.y * 32)
-        end
-    end
-
-    if self.gamepad:buttonPressed("leftshoulder") then
-        self.influenceArea.active = true
-    else
-        self.influenceArea.active = false
-    end
+    self:inputUpdate()
 end
 
 function Player:postUpdate(dt)
     self.influenceArea.position.x = self.body.position.x - (self.influenceArea.width - self.body.width) / 2
     self.influenceArea.position.y = self.body.position.y - (self.influenceArea.height - self.body.height) / 2
 
-    local rightAnalogMovement = self.gamepad:axis("rightx") * self.gamepad:axis("rightx") +
-    self.gamepad:axis("righty") * self.gamepad:axis("righty")
-
-    if rightAnalogMovement >= 0.81 and not self.flagManager:isFlagSet("SHOT_COOLDOWN") then
-        local rightAnalogDirection = math.atan2(self.gamepad:axis("righty"), self.gamepad:axis("rightx"))
-        self.parentContext:addBullet(self.body.position.x + self.width / 2, self.body.position.y + self.height / 2, rightAnalogDirection)
-
-        self.flagManager:setFlag("SHOT_COOLDOWN")
-        self.timer:start(SHOT_COOLDOWN, function ()
-            self.flagManager:resetFlag("SHOT_COOLDOWN")
-        end)
-    end
-
     if self.junkSource then
         self.junk = self.junk + JUNK_EXTRACTION_PER_SECOND * dt
     end
+
+    self:inputPostUpdate()
 end
 
 function Player:draw()

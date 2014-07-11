@@ -50,20 +50,21 @@ local function loadResources(world, resources)
     end
 end
 
-function StageContext:init(gamepads, stageFile)
+function StageContext:init(gamepads, keyboard, stageFile)
     GameContext.init(self)
 
     self.pWorld = AABBPhysics.createWorld()
 
     self.tiledMapFile = require (stageFile)
     self.gamepads = gamepads
-    
+    self.keyboard = keyboard
+
     local tilemap = nil
     local paths = nil
     for _, layer in pairs(self.tiledMapFile.layers) do
         if layer.name == MAP_LAYER then
             tilemap = Tilemap(self.tiledMapFile.tilesets[1].image, layer,
-                self.tiledMapFile.tilewidth, self.tiledMapFile.tileheight)
+            self.tiledMapFile.tilewidth, self.tiledMapFile.tileheight)
         end
 
         if layer.name == PATH_LAYER then
@@ -77,10 +78,17 @@ function StageContext:init(gamepads, stageFile)
 
     self:addObject(tilemap)
     self.pWorld:loadTilemap(tilemap, {false, true, true, true}, true)
-    self:addObject(Player(self.gamepads[1], 
+    if #self.gamepads > 0 then
+        self:addObject(Player({method = "gamepad", gamepad = self.gamepads[1]}, 
         self.pWorld:createBody(32, 32, "player"), 
         self.pWorld:createBody(48, 48, "playerInfluence")
-    ))
+        ))
+    else
+        self:addObject(Player({method = "keyboard", keyboard = self.keyboard}, 
+        self.pWorld:createBody(32, 32, "player"), 
+        self.pWorld:createBody(48, 48, "playerInfluence")
+        ))
+    end
 
     self.timer = Timer ()
     self.groupsSpawned = 0
@@ -114,7 +122,7 @@ function StageContext:init(gamepads, stageFile)
             self.timer:start(SPAWN_INTERVAL, spawn)
         end
     end
-    spawn()
+--  spawn()
 end
 
 function StageContext:addBullet(x, y, angle)
@@ -135,7 +143,7 @@ end
 
 function StageContext:updateBucket(bucket, dt)
     self.timer:update(dt)
-    
+
     GameContext.updateBucket(self, bucket, dt)
 
     self.pWorld:update(dt)

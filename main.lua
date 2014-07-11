@@ -1,5 +1,6 @@
 -- Import
 local Gamepad = require "Gamepad"
+local Keyboard = require "Keyboard"
 local Constants = require "Constants"
 local StageContext = require "StageContext"
 
@@ -15,10 +16,15 @@ setmetatable (gamepads, {
 })
 
 local currentContext = nil
+local keyboard = nil
 
 function love.load()
     -- Screen size
     love.window.setMode(Constants.screenWidth, Constants.screenHeight)
+    
+    -- Keyboard initialization
+    love.keyboard.setKeyRepeat(false)
+    keyboard = Keyboard(20)
 
     for i, joystick in ipairs(love.joystick.getJoysticks()) do
         if joystick:isGamepad() then
@@ -26,16 +32,25 @@ function love.load()
         end
     end
 
-    currentContext = StageContext(gamepads, "map")
+    currentContext = StageContext(gamepads, keyboard, "map")
 end
 
 function love.update(dt)
     currentContext:update(dt)
     gamepads:update(dt) 
+    keyboard:update(dt)
 end
 
 function love.draw()
     currentContext:draw()
+end
+
+function love.keypressed(key)
+    keyboard:updateKey(key, true)
+end
+
+function love.keyreleased(key)
+    keyboard:updateKey(key, false)
 end
 
 function love.joystickadded(joystick)

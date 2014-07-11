@@ -80,6 +80,7 @@ local function axisGT(a, b)
     if math.abs(a) >= math.abs(b) and a * b >= 0 then
         return true
     end
+    return false
 end
 
 function Gamepad:axis(axis)
